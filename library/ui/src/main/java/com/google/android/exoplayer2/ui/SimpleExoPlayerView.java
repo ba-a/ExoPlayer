@@ -53,6 +53,8 @@ import com.google.android.exoplayer2.util.RepeatModeUtil;
 import com.google.android.exoplayer2.util.Util;
 import java.util.List;
 
+import static com.google.android.exoplayer2.Player.STATE_READY;
+
 /**
  * A high level view for {@link SimpleExoPlayer} media playbacks. It displays video, subtitles and
  * album art during playback, and displays playback controls using a {@link PlaybackControlView}.
@@ -314,11 +316,14 @@ public final class SimpleExoPlayerView extends FrameLayout {
     // Create a surface view and insert it into the content frame, if there is one.
     if (contentFrame != null && surfaceType != SURFACE_TYPE_NONE) {
       ViewGroup.LayoutParams params = new ViewGroup.LayoutParams(
-          ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-      surfaceView = surfaceType == SURFACE_TYPE_TEXTURE_VIEW ? new TextureView(context)
-          : new SurfaceView(context);
+              ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+      // For testing we just use a SurfaceView here, ANR doesn't appear for a TextureView
+      surfaceView = new SurfaceView(context);
       surfaceView.setLayoutParams(params);
       contentFrame.addView(surfaceView, 0);
+
+      // Hide the surface view until the player is ready (Bug exists as well if set to INVISIBLE)
+      surfaceView.setVisibility(View.GONE);
     } else {
       surfaceView = null;
     }
@@ -968,6 +973,11 @@ public final class SimpleExoPlayerView extends FrameLayout {
 
     @Override
     public void onPlayerStateChanged(boolean playWhenReady, int playbackState) {
+      // Set the surface view to visible when the player is ready.
+      if(playbackState == STATE_READY)
+        surfaceView.setVisibility(View.VISIBLE);
+
+
       if (isPlayingAd() && controllerHideDuringAds) {
         hideController();
       } else {
